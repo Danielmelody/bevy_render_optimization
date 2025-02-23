@@ -118,6 +118,22 @@ fn sample_input_3x3_tent(uv: vec2<f32>) -> vec3<f32> {
     return sample;
 }
 
+fn sample_input_2x2_tent(uv: vec2<f32>) -> vec3<f32> {
+    // Sample 4 points in a rotated square pattern like MSAA 4x
+    let offset = (1.0 / vec2<f32>(textureDimensions(input_texture))) * 0.5;
+    
+    // Sample points rotated 15 degrees:
+    // (-0.2, 0.7), (0.7, 0.2), (0.2, -0.7), (-0.7, -0.2)
+    let a = textureSample(input_texture, s, uv + offset * vec2<f32>(-0.2, 0.7)).rgb;
+    let b = textureSample(input_texture, s, uv + offset * vec2<f32>(0.7, 0.2)).rgb;
+    let c = textureSample(input_texture, s, uv + offset * vec2<f32>(0.2, -0.7)).rgb;
+    let d = textureSample(input_texture, s, uv + offset * vec2<f32>(-0.7, -0.2)).rgb;
+
+    // Equal weight average
+    var sample = (a + b + c + d) * 0.25;
+    return sample;
+}
+
 #ifdef FIRST_DOWNSAMPLE
 @fragment
 fn downsample_first(@location(0) output_uv: vec2<f32>) -> @location(0) vec4<f32> {
@@ -143,6 +159,14 @@ fn downsample(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
 }
 
 @fragment
+fn upsample_final(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
+    return vec4<f32>(sample_input_2x2_tent(uv), 1.0);
+}
+
+
+@fragment
 fn upsample(@location(0) uv: vec2<f32>) -> @location(0) vec4<f32> {
     return vec4<f32>(sample_input_3x3_tent(uv), 1.0);
 }
+
+

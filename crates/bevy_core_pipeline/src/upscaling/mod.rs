@@ -13,7 +13,10 @@ mod node;
 
 pub use node::UpscalingNode;
 
-pub struct UpscalingPlugin;
+#[derive(Default)]
+pub struct UpscalingPlugin {
+    pub bicubic: bool,
+}
 
 impl Plugin for UpscalingPlugin {
     fn build(&self, app: &mut App) {

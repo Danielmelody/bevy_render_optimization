@@ -299,6 +299,9 @@ pub enum ViewportConversionError {
 pub struct Camera {
     /// If set, this camera will render to the given [`Viewport`] rectangle within the configured [`RenderTarget`].
     pub viewport: Option<Viewport>,
+
+    pub override_render_target_size: Option<UVec2>,
+    pub override_scale_factor: Option<f32>,
     /// Cameras with a higher order are rendered later, and thus on top of lower order cameras.
     pub order: isize,
     /// If this is set to `true`, this camera will be rendered to its specified [`RenderTarget`]. If `false`, this
@@ -338,6 +341,8 @@ impl Default for Camera {
         Self {
             is_active: true,
             order: 0,
+            override_render_target_size: None,
+            override_scale_factor: None,
             viewport: None,
             computed: Default::default(),
             target: Default::default(),
@@ -813,14 +818,19 @@ impl NormalizedRenderTarget {
         resolutions: impl IntoIterator<Item = (Entity, &'a Window)>,
         images: &Assets<Image>,
         manual_texture_views: &ManualTextureViews,
+        camera: &Camera,
     ) -> Option<RenderTargetInfo> {
         match self {
             NormalizedRenderTarget::Window(window_ref) => resolutions
                 .into_iter()
                 .find(|(entity, _)| *entity == window_ref.entity())
                 .map(|(_, window)| RenderTargetInfo {
-                    physical_size: window.physical_size(),
-                    scale_factor: window.resolution.scale_factor(),
+                    physical_size: camera
+                        .override_render_target_size
+                        .unwrap_or(window.physical_size()),
+                    scale_factor: camera
+                        .override_scale_factor
+                        .unwrap_or(window.resolution.scale_factor()),
                 }),
             NormalizedRenderTarget::Image(image_handle) => {
                 let image = images.get(image_handle)?;
@@ -922,6 +932,7 @@ pub fn camera_system<T: CameraProjection + Component>(
                     &windows,
                     &images,
                     &manual_texture_views,
+                    &camera,
                 );
                 // Check for the scale factor changing, and resize the viewport if needed.
                 // This can happen when the window is moved between monitors with different DPIs.

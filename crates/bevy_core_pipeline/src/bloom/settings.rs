@@ -113,6 +113,8 @@ pub struct Bloom {
     /// Only tweak if you are seeing visual artifacts.
     pub max_mip_dimension: u32,
 
+    pub max_mip_map_count: u32,
+
     /// UV offset for bloom shader. Ideally close to 2.0 / `max_mip_dimension`.
     /// Only tweak if you are seeing visual artifacts.
     pub uv_offset: f32,
@@ -123,6 +125,7 @@ pub type BloomSettings = Bloom;
 
 impl Bloom {
     const DEFAULT_MAX_MIP_DIMENSION: u32 = 512;
+    const DEFAULT_MAX_MIP_COUNT: u32 = 10;
     const DEFAULT_UV_OFFSET: f32 = 0.004;
 
     /// The default bloom preset.
@@ -139,6 +142,7 @@ impl Bloom {
         },
         composite_mode: BloomCompositeMode::EnergyConserving,
         max_mip_dimension: Self::DEFAULT_MAX_MIP_DIMENSION,
+        max_mip_map_count: Self::DEFAULT_MAX_MIP_COUNT,
         uv_offset: Self::DEFAULT_UV_OFFSET,
     };
 
@@ -154,6 +158,7 @@ impl Bloom {
         },
         composite_mode: BloomCompositeMode::Additive,
         max_mip_dimension: Self::DEFAULT_MAX_MIP_DIMENSION,
+        max_mip_map_count: Self::DEFAULT_MAX_MIP_COUNT,
         uv_offset: Self::DEFAULT_UV_OFFSET,
     };
 
@@ -169,6 +174,7 @@ impl Bloom {
         },
         composite_mode: BloomCompositeMode::EnergyConserving,
         max_mip_dimension: Self::DEFAULT_MAX_MIP_DIMENSION,
+        max_mip_map_count: Self::DEFAULT_MAX_MIP_COUNT,
         uv_offset: Self::DEFAULT_UV_OFFSET,
     };
 }

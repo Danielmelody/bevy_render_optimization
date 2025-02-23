@@ -8,7 +8,6 @@ use bevy_ecs::{
     event::{EventCursor, EventWriter},
     prelude::*,
     system::SystemState,
-    world::FromWorld,
 };
 #[cfg(feature = "custom_cursor")]
 use bevy_image::Image;
@@ -90,6 +89,12 @@ struct WinitAppRunnerState<T: Event> {
         Query<'static, 'static, (&'static mut Window, &'static mut CachedWindow)>,
         NonSendMut<'static, AccessKitAdapters>,
     )>,
+    create_monitor_system_state: SystemState<CreateMonitorParams<'static, 'static>>,
+    create_window_system_state: SystemState<CreateWindowParams<'static, 'static>>,
+    focused_windows_state: SystemState<(
+        Res<'static, WinitSettings>,
+        Query<'static, 'static, (Entity, &'static Window)>,
+    )>,
 }
 
 impl<T: Event> WinitAppRunnerState<T> {
@@ -105,6 +110,12 @@ impl<T: Event> WinitAppRunnerState<T> {
             Query<(&mut Window, &mut CachedWindow)>,
             NonSendMut<AccessKitAdapters>,
         )> = SystemState::new(app.world_mut());
+        let create_monitor_system_state: SystemState<CreateMonitorParams> =
+            SystemState::new(app.world_mut());
+        let create_window_system_state: SystemState<CreateWindowParams> =
+            SystemState::new(app.world_mut());
+        let focused_windows_state: SystemState<(Res<WinitSettings>, Query<(Entity, &Window)>)> =
+            SystemState::new(app.world_mut());
 
         Self {
             app,
@@ -123,6 +134,9 @@ impl<T: Event> WinitAppRunnerState<T> {
             bevy_window_events: Vec::new(),
             _marker: PhantomData,
             event_writer_system_state,
+            create_monitor_system_state,
+            create_window_system_state,
+            focused_windows_state,
         }
     }
 
@@ -438,20 +452,32 @@ impl<T: Event> ApplicationHandler<T> for WinitAppRunnerState<T> {
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-        let mut create_monitor = SystemState::<CreateMonitorParams>::from_world(self.world_mut());
+        // let mut create_monitor = &self.create_monitor_system_state;
         // create any new windows
         // (even if app did not update, some may have been created by plugin setup)
-        let mut create_window =
-            SystemState::<CreateWindowParams<Added<Window>>>::from_world(self.world_mut());
-        create_monitors(event_loop, create_monitor.get_mut(self.world_mut()));
-        create_monitor.apply(self.world_mut());
-        create_windows(event_loop, create_window.get_mut(self.world_mut()));
-        create_window.apply(self.world_mut());
+        // let mut create_window =
+        // SystemState::<CreateWindowParams<Added<Window>>>::from_world(self.world_mut());
+        if self
+            .world()
+            .non_send_resource::<WinitWindows>()
+            .windows
+            .is_empty()
+        {
+            create_monitors(
+                event_loop,
+                self.create_monitor_system_state
+                    .get_mut(self.app.world_mut()),
+            );
+            self.create_monitor_system_state.apply(self.app.world_mut());
+            create_windows(
+                event_loop,
+                self.create_window_system_state
+                    .get_mut(self.app.world_mut()),
+            );
+            self.create_window_system_state.apply(self.app.world_mut());
+        }
 
         let mut redraw_event_reader = EventCursor::<RequestRedraw>::default();
-
-        let mut focused_windows_state: SystemState<(Res<WinitSettings>, Query<(Entity, &Window)>)> =
-            SystemState::new(self.world_mut());
 
         if let Some(app_redraw_events) = self.world().get_resource::<Events<RequestRedraw>>() {
             if redraw_event_reader.read(app_redraw_events).last().is_some() {
@@ -459,7 +485,7 @@ impl<T: Event> ApplicationHandler<T> for WinitAppRunnerState<T> {
             }
         }
 
-        let (config, windows) = focused_windows_state.get(self.world());
+        let (config, windows) = self.focused_windows_state.get(self.app.world());
         let focused = windows.iter().any(|(_, window)| window.focused);
 
         let mut update_mode = config.update_mode(focused);
@@ -547,7 +573,7 @@ impl<T: Event> ApplicationHandler<T> for WinitAppRunnerState<T> {
         let begin_frame_time = Instant::now();
 
         if should_update {
-            let (_, windows) = focused_windows_state.get(self.world());
+            let (_, windows) = self.focused_windows_state.get(self.app.world());
             // If no windows exist, this will evaluate to `true`.
             let all_invisible = windows.iter().all(|w| !w.1.visible);
 
@@ -568,7 +594,7 @@ impl<T: Event> ApplicationHandler<T> for WinitAppRunnerState<T> {
             }
 
             // Running the app may have changed the WinitSettings resource, so we have to re-extract it.
-            let (config, windows) = focused_windows_state.get(self.world());
+            let (config, windows) = self.focused_windows_state.get(self.app.world());
             let focused = windows.iter().any(|(_, window)| window.focused);
             update_mode = config.update_mode(focused);
         }

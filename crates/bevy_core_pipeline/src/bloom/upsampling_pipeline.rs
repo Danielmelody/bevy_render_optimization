@@ -67,6 +67,18 @@ impl SpecializedRenderPipeline for BloomUpsamplingPipeline {
             BLOOM_TEXTURE_FORMAT
         };
 
+        let entry_point = if key.final_pipeline {
+            "upsample_final"
+        } else {
+            "upsample"
+        };
+
+        let label = if key.final_pipeline {
+            "bloom_upsampling_pipeline_final"
+        } else {
+            "bloom_upsampling_pipeline"
+        };
+
         let color_blend = match key.composite_mode {
             BloomCompositeMode::EnergyConserving => {
                 // At the time of developing this we decided to blend our
@@ -100,13 +112,13 @@ impl SpecializedRenderPipeline for BloomUpsamplingPipeline {
         };
 
         RenderPipelineDescriptor {
-            label: Some("bloom_upsampling_pipeline".into()),
+            label: Some(label.into()),
             layout: vec![self.bind_group_layout.clone()],
             vertex: fullscreen_shader_vertex_state(),
             fragment: Some(FragmentState {
                 shader: BLOOM_SHADER_HANDLE,
                 shader_defs: vec![],
-                entry_point: "upsample".into(),
+                entry_point: entry_point.into(),
                 targets: vec![Some(ColorTargetState {
                     format: texture_format,
                     blend: Some(BlendState {

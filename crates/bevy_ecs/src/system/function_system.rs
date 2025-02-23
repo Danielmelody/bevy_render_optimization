@@ -60,7 +60,7 @@ impl SystemMeta {
             is_send: true,
             has_deferred: false,
             last_run: Tick::new(0),
-            param_warn_policy: ParamWarnPolicy::Panic,
+            param_warn_policy: ParamWarnPolicy::Once,
             #[cfg(feature = "trace")]
             system_span: info_span!("system", name = name),
             #[cfg(feature = "trace")]

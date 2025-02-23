@@ -101,7 +101,7 @@ impl Plugin for CorePipelinePlugin {
                 BlitPlugin,
                 MsaaWritebackPlugin,
                 TonemappingPlugin,
-                UpscalingPlugin,
+                UpscalingPlugin::default(),
                 BloomPlugin,
                 FxaaPlugin,
                 CasPlugin,
